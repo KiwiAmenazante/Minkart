@@ -1,5 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
+const isUuid = (val) => Boolean(val && typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
+
 // ─── ESTADO LOCAL (solo si Supabase no está configurado; arranca vacío) ─────
 let localProjects = []
 let localProjectUpdates = []
@@ -223,7 +225,7 @@ export const getProjects = async () => {
 }
 
 export const getProjectById = async (id) => {
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured && isUuid(id)) {
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -239,7 +241,7 @@ export const getProjectById = async (id) => {
 
 // ─── PROJECT UPDATES (AVANCES) ──────────────────────────────────────────────
 export const getProjectUpdates = async (projectId) => {
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured && isUuid(projectId)) {
     try {
       const { data, error } = await supabase
         .from('project_updates')
@@ -256,7 +258,7 @@ export const getProjectUpdates = async (projectId) => {
 }
 
 export const createProjectUpdate = async ({ projectId, title, content, mediaUrl }) => {
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured && isUuid(projectId)) {
     try {
       const { data, error } = await supabase
         .from('project_updates')
@@ -289,7 +291,7 @@ export const createProjectUpdate = async ({ projectId, title, content, mediaUrl 
 
 // ─── RANKING ESPECÍFICO POR PROYECTO ────────────────────────────────────────
 export const getProjectTopDonors = async (projectId) => {
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured && isUuid(projectId)) {
     try {
       const { data, error } = await supabase
         .from('contributions')
@@ -578,25 +580,23 @@ export const updateProject = async (projectId, updatedData, newTiers) => {
 // ─── CONTRIBUTE ──────────────────────────────────────────────────────────────
 export const contributeToProject = async ({ projectId, amount, rewardTierId, userId }) => {
   const numAmount = parseFloat(amount)
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured && isUuid(projectId)) {
     try {
-      const { error } = await supabase.from('contributions').insert([{
+      const validRewardTierId = isUuid(rewardTierId) ? rewardTierId : null
+      const validUserId = isUuid(userId) ? userId : null
+
+      const { data, error } = await supabase.from('contributions').insert([{
         project_id: projectId,
-        user_id: userId || null,
-        reward_tier_id: rewardTierId || null,
+        user_id: validUserId,
+        reward_tier_id: validRewardTierId,
         amount: numAmount,
         status: 'completed'
-      }])
-      if (!error) {
-        const { data: proj } = await supabase.from('projects').select('current_amount, funding_goal').eq('id', projectId).single()
-        if (proj) {
-          const newCurrent = Number(proj.current_amount) + numAmount
-          await supabase.from('projects').update({
-            current_amount: newCurrent,
-            status: newCurrent >= Number(proj.funding_goal) ? 'funded' : 'active'
-          }).eq('id', projectId)
-        }
+      }]).select()
+
+      if (!error && data) {
         return { success: true, isReal: true }
+      } else if (error) {
+        console.warn('contributeToProject Supabase error:', error)
       }
     } catch (err) { console.warn('contributeToProject exception:', err) }
   }
@@ -621,7 +621,7 @@ export const contributeToProject = async ({ projectId, amount, rewardTierId, use
 
 // ─── PROFILE ─────────────────────────────────────────────────────────────────
 export const getUserProfile = async (userId) => {
-  if (isSupabaseConfigured && userId) {
+  if (isSupabaseConfigured && isUuid(userId)) {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
       if (!error && data) return data
@@ -631,7 +631,7 @@ export const getUserProfile = async (userId) => {
 }
 
 export const updateUserProfile = async (userId, profileData) => {
-  if (isSupabaseConfigured && userId) {
+  if (isSupabaseConfigured && isUuid(userId)) {
     try {
       const { error } = await supabase.from('profiles').update(profileData).eq('id', userId)
       if (!error) return { success: true }
@@ -642,7 +642,7 @@ export const updateUserProfile = async (userId, profileData) => {
 }
 
 export const getUserProjects = async (userId) => {
-  if (isSupabaseConfigured && userId) {
+  if (isSupabaseConfigured && isUuid(userId)) {
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -656,7 +656,7 @@ export const getUserProjects = async (userId) => {
 }
 
 export const getUserContributions = async (userId) => {
-  if (isSupabaseConfigured && userId) {
+  if (isSupabaseConfigured && isUuid(userId)) {
     try {
       const { data, error } = await supabase
         .from('contributions')

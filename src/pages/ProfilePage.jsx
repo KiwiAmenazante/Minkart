@@ -22,9 +22,13 @@ export const ProfilePage = ({ currentUser, onOpenAuth }) => {
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
+    if (!currentUser?.id) {
+      setIsLoading(false)
+      return
+    }
     const loadProfileData = async () => {
       setIsLoading(true)
-      const userId = currentUser?.id || 'demo_user'
+      const userId = currentUser.id
       const pData = await getUserProfile(userId)
       if (pData) {
         setProfile((prev) => ({ ...prev, ...pData }))
@@ -56,9 +60,9 @@ export const ProfilePage = ({ currentUser, onOpenAuth }) => {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault()
+    if (!currentUser?.id) return
     setIsSaving(true)
-    const userId = currentUser?.id || 'demo_user'
-    await updateUserProfile(userId, profile)
+    await updateUserProfile(currentUser.id, profile)
     setIsSaving(false)
     setSaveSuccess(true)
     setTimeout(() => setSaveSuccess(false), 2500)
