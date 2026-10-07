@@ -12,25 +12,19 @@ const ai = isGeminiConfigured ? new GoogleGenAI({ apiKey: geminiApiKey }) : null
 // Helper to call Gemini and parse JSON from response
 async function callGemini(prompt) {
   if (!isGeminiConfigured || !ai) return null
-  try {
-    let response
+  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash-latest']
+  for (const modelName of modelsToTry) {
     try {
-      response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+      const response = await ai.models.generateContent({
+        model: modelName,
         contents: prompt
       })
-    } catch (modelErr) {
-      console.warn('Fallback Gemini model retry:', modelErr)
-      response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt
-      })
+      const text = response?.text || ''
+      const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/)
+      if (match) return JSON.parse(match[0])
+    } catch (err) {
+      console.warn(`Gemini API error with model ${modelName}:`, err)
     }
-    const text = response?.text || ''
-    const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/)
-    if (match) return JSON.parse(match[0])
-  } catch (err) {
-    console.error('Gemini API error:', err)
   }
   return null
 }
