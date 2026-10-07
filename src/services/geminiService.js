@@ -12,7 +12,7 @@ const ai = isGeminiConfigured ? new GoogleGenAI({ apiKey: geminiApiKey }) : null
 // Helper to call Gemini and parse JSON from response
 async function callGemini(prompt) {
   if (!isGeminiConfigured || !ai) return null
-  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash-latest']
+  const modelsToTry = ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-pro']
   for (const modelName of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
